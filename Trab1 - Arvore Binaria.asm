@@ -126,8 +126,16 @@ pre_ordem:	lw $t0, 0($sp)		#  Carrega o primeiro valor da arvore em $t0 e
 		##  ##
 		lw $t0, 0($sp)		#  Carrega o valor do vetor para $t0.
 		beqz $t0, voltoAnterior	#  Se for zero, preciso voltar na recursao.
-		j recursao_pre_esq		#  Se nao for zero, eu continuo com o loop.
+		j recursao_pre_esq	#  Se nao for zero, eu continuo com o loop.
 	voltoAnterior:
+		lw $sp, 0($s2)		#  Carrego o endereco do valor anterior.
+		##  Primeiro preciso voltar a posicao guardada em $s1 para o no pai
+		#para que depois eu possa andar para a direita.
+		subi $s1, $s1, 1	# no pai = (i-1)/2
+		div $s1, $s1, 2
+		mul $t1, $s1, -4
+		
+		
 		
 	
 		
