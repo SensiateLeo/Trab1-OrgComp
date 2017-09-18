@@ -8,8 +8,8 @@
 ########################## DATA ##############################
 		.data
 		.align 2
-vet_ESQ:	.space 400		
-vet_DIR:	.space 400					
+#pilha_ESQ:	.space 100		
+pilha_rec:	.word 100					
 					#  Aqui eu aloco um vetor para ser utilizado nas
 					#recursoes dos algoritmos. 400 eh um valor arbitrario
 					#grande o suficiente para que construir umas arvore 
@@ -19,9 +19,9 @@ vet_DIR:	.space 400
 					# Codigo em C para visualizacao (exemplo):
 					# void emOrdem(struct No *pNo) {
     					# if(pNo != NULL) {
-					#      emOrdem(pNo?pEsquerda);
+					#      emOrdem(pEsquerda);
     					#      visita(pNo);
-   					#      emOrdem(pNo?pDireita);
+   					#      emOrdem(pDireita);
   					#    }
  					# }
 str_menu:	.asciiz "\nMenu:\n1. Insercao.\n2. Percorrimento pre-ordem.\n3. Percorrimento em-ordem.\n4. Percorrimento pos-ordem.\n5. Sair.\n"
@@ -41,7 +41,9 @@ str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
 #  Registradores convencionados (favor nao trocar!):
 #  $s0 = guarda o valor do comeco da pilha $sp.
 #  $t0 = usado em diversas partes do codigo para guardar os valores da pilha para comparacao.
-#  $s1 = usado para guardar a posicao atual no vetor (2*i+1 e 2*i+2).					
+#  $t1 =  usado para guardar o valor de 2*i+1 ou 2*i+2 multiplicado por -4.
+#  $s1 = usado para guardar a posicao atual no vetor (2*i+1 e 2*i+2).
+#  $s2 = usado para guardar o endereco da pilha_rec.					
 		.text
 		move $s0, $sp		#  Incializa $s0 com o valor de $sp, para voltarmos
 					#no vetor se precisarmos.
@@ -103,8 +105,32 @@ insercao:	la $a0, str_digite	#  Impressao da string para aquisitar um valor.
 ###### Fim funcao de insercao ######
 
 ###### Funcao de Pre_ordem ######
-pre_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor do vetor em $t0.
-		beqz $t0, ERRO_VAZIO	#  Aqui ocorre um erro se a arvore estiver vazia.
+pre_ordem:	lw $t0, 0($sp)		#  Carrega o primeiro valor da arvore em $t0 e 
+		beqz $t0, ERRO_VAZIO	#verifica se eh uma arvore vazia.
+		la $s2, pilha_rec	#  $s2 = endereco do vetor 
+		move $t2, $zero		#  Variavel para guardar o tamanho do vetor.	
+	recursao_pre_esq:
+		lw $t0, 0($sp)		#  Pego o valor do no, dif de zero.
+		move $a0, $t0		#  Printa o valor.
+		jal print_valor
+		##  Armazena o endereco do valor e anda no vetor.
+		sw $sp, 0($s2)		#  Armazeno o endereco no vetor para poder saber em
+					#qual voltar depois.
+		addi $t2, $t2, 1	#  tamanho++
+		addi $s2, $s2, 4	#  Vai para a prox posicao do vetor.		
+		##  Vou para a esquerda
+		mul $s1, $s1, 2		#  2i+1 = vai para a esquerda
+		addi $s1, $s1, 1
+		mul $t1, $s1, -4
+		add $sp, $sp, $t1
+		##  ##
+		lw $t0, 0($sp)		#  Carrega o valor do vetor para $t0.
+		beqz $t0, voltoAnterior	#  Se for zero, preciso voltar na recursao.
+		j recursao_pre_esq		#  Se nao for zero, eu continuo com o loop.
+	voltoAnterior:
+		
+	
+		
 ###### Fim da funcao de Pre_ordem ######
 
 ###### Funcao de Em_ordem ######
