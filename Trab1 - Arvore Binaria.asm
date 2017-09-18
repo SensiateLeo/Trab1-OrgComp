@@ -1,15 +1,16 @@
-############ Trabalho 1 de Organizacoa de Computadores ################################
-#	Trabalho desenvolvido pelos alunos: Hiago De Franco Moreira (9771289), Leonardo
-# Sensiate (9771571), Mateus Castilho Leite (9771550) e Vincius Nakasone Dilda (9771612).
-#	O Trabalho compreende implementar em Assembly MIPS um algoritmo que permita a 
-#insercao e posteriormente os percorrimentos pre-ordem, em-ordem e pos-ordem em uma 
-#arvore binaria ordenada.
+##################### Trabalho 1 de Organizacoa de Computadores ##########################
+#	Trabalho desenvolvido pelos alunos: Hiago De Franco Moreira (9771289), Leonardo  #
+# Sensiate (9771571), Mateus Castilho Leite (9771550) e Vincius Nakasone Dilda (9771612).#
+#	O Trabalho compreende implementar em Assembly MIPS um algoritmo que permita a    #
+#insercao e posteriormente os percorrimentos pre-ordem, em-ordem e pos-ordem em uma      #
+#arvore binaria ordenada.								 #
+##########################################################################################
 
-########################## DATA ##############################
+############################################## DATA ######################################
 		.data
 		.align 2
 #pilha_ESQ:	.space 100		
-pilha_rec:	.word 100					
+pilha_rec:	.space 100					
 					#  Aqui eu aloco um vetor para ser utilizado nas
 					#recursoes dos algoritmos. 400 eh um valor arbitrario
 					#grande o suficiente para que construir umas arvore 
@@ -35,7 +36,7 @@ str_pontoVir:	.asciiz ";"
 str_pontoFin:	.asciiz "."
 str_vazio:	.asciiz "Arvore Vazia!\n"
 str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
-####################### END DATA ############################
+########################################### END DATA #######################################
 		
 ###################### TEXT #################################
 #  Registradores convencionados (favor nao trocar!):
@@ -47,7 +48,7 @@ str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
 		.text
 		move $s0, $sp		#  Incializa $s0 com o valor de $sp, para voltarmos
 					#no vetor se precisarmos.
-###### Inicio Main ######		
+###### Inicio Main ######			
 main:		#jal print_newline
 		la $a0, str_menu	#  Impresssao do menu.
 		li $v0, 4
@@ -134,11 +135,16 @@ pre_ordem:	lw $t0, 0($sp)		#  Carrega o primeiro valor da arvore em $t0 e
 		subi $s1, $s1, 1	# no pai = (i-1)/2
 		div $s1, $s1, 2
 		mul $t1, $s1, -4
-		
-		
-		
-	
-		
+		## Ando para a direita.
+		mul $s1, $s1, 2		#  direita = 2*i+2
+		addi $s1, $s1, 2
+		mul $t1, $s1, -4
+		add $sp, $sp, $t1
+		lw $t0, 0($sp)		#  Carrego o valor em $t0 e verifico se ele eh zero
+		beqz $t0, voltoAnterior #  Se o valor for zero, preciso voltar para o pai.
+		move $a0, $t0		#  Se nao, eu printo o valor e vou para a esquerda.
+		jal print_valor
+		j recursao_pre_esq
 ###### Fim da funcao de Pre_ordem ######
 
 ###### Funcao de Em_ordem ######
