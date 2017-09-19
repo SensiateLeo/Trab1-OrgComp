@@ -9,8 +9,8 @@
 ############################################## DATA ######################################
 		.data
 		.align 2
-#pilha_ESQ:	.space 100		
-pilha_rec:	.space 100					
+pilha_recESQ:	.space 100		
+pilha_recDIR:	.space 100					
 					#  Aqui eu aloco um vetor para ser utilizado nas
 					#recursoes dos algoritmos. 400 eh um valor arbitrario
 					#grande o suficiente para que construir umas arvore 
@@ -38,16 +38,23 @@ str_vazio:	.asciiz "Arvore Vazia!\n"
 str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
 ########################################### END DATA #######################################
 		
-###################### TEXT #################################
-#  Registradores convencionados (favor nao trocar!):
-#  $s0 = guarda o valor do comeco da pilha $sp.
+############################################ TEXT ##########################################
+
+############################################################################################
+#  Registradores convencionados (favor nao trocar!):					   #
+#  $s0 = guarda o valor do comeco da pilha $sp.						   #
 #  $t0 = usado em diversas partes do codigo para guardar os valores da pilha para comparacao.
-#  $t1 =  usado para guardar o valor de 2*i+1 ou 2*i+2 multiplicado por -4.
-#  $s1 = usado para guardar a posicao atual no vetor (2*i+1 e 2*i+2).
-#  $s2 = usado para guardar o endereco da pilha_rec.					
+#  $t1 =  usado para guardar o valor de 2*i+1 ou 2*i+2 multiplicado por -4.		   #
+#  $s1 = usado para guardar a posicao atual no vetor (2*i+1 e 2*i+2).			   #
+#  $s2 = usado para guardar o endereco da pilha_recESQ.					   #
+#  $s3 = usado para guardar o endereco da pilha_recDIR.					   #
+###########################################################################################					
 		.text
 		move $s0, $sp		#  Incializa $s0 com o valor de $sp, para voltarmos
 					#no vetor se precisarmos.
+		la $s2, pilha_recESQ	#  Recebe o endereco do vetor pilha_recESQ, onde serao
+					#armazenados os valores de retorno da recursao.
+		la $s3, pilha_recDIR	#  Mesmo para a pilha_recDIR.
 ###### Inicio Main ######			
 main:		#jal print_newline
 		la $a0, str_menu	#  Impresssao do menu.
@@ -106,45 +113,27 @@ insercao:	la $a0, str_digite	#  Impressao da string para aquisitar um valor.
 ###### Fim funcao de insercao ######
 
 ###### Funcao de Pre_ordem ######
-pre_ordem:	lw $t0, 0($sp)		#  Carrega o primeiro valor da arvore em $t0 e 
-		beqz $t0, ERRO_VAZIO	#verifica se eh uma arvore vazia.
-		la $s2, pilha_rec	#  $s2 = endereco do vetor 
-		move $t2, $zero		#  Variavel para guardar o tamanho do vetor.	
-	recursao_pre_esq:
-		lw $t0, 0($sp)		#  Pego o valor do no, dif de zero.
-		move $a0, $t0		#  Printa o valor.
+pre_ordem:	lw $t0, 0($sp)
+		beqz $t0, ERRO_VAZIO
+		jal recursao_pre	#  Chama a recursao.
+		j main			#  Volta para o menu.
+	recursao_pre:
+		sw $ra, 0($s2)
+		addi $s2, $s2, 4	#  Vai para o proximo valor do vetorESQ.
+		## BASE ##
+		lw $t0, 0($sp)		#  Retiro o valor do no do vetor.
+		beqz $t0, fimPreOrdem	#  Se o valor for zero, volto na recursao
+		## ##
+		move $a0, $t0		#  Se o valor nao eh zero, entao printa.
 		jal print_valor
-		##  Armazena o endereco do valor e anda no vetor.
-		sw $sp, 0($s2)		#  Armazeno o endereco no vetor para poder saber em
-					#qual voltar depois.
-		addi $t2, $t2, 1	#  tamanho++
-		addi $s2, $s2, 4	#  Vai para a prox posicao do vetor.		
-		##  Vou para a esquerda
-		mul $s1, $s1, 2		#  2i+1 = vai para a esquerda
+		## Vou para o no da esquerda ##
+		mul $s1, $s1, 2 
 		addi $s1, $s1, 1
 		mul $t1, $s1, -4
 		add $sp, $sp, $t1
 		##  ##
-		lw $t0, 0($sp)		#  Carrega o valor do vetor para $t0.
-		beqz $t0, voltoAnterior	#  Se for zero, preciso voltar na recursao.
-		j recursao_pre_esq	#  Se nao for zero, eu continuo com o loop.
-	voltoAnterior:
-		lw $sp, 0($s2)		#  Carrego o endereco do valor anterior.
-		##  Primeiro preciso voltar a posicao guardada em $s1 para o no pai
-		#para que depois eu possa andar para a direita.
-		subi $s1, $s1, 1	# no pai = (i-1)/2
-		div $s1, $s1, 2
-		mul $t1, $s1, -4
-		## Ando para a direita.
-		mul $s1, $s1, 2		#  direita = 2*i+2
-		addi $s1, $s1, 2
-		mul $t1, $s1, -4
-		add $sp, $sp, $t1
-		lw $t0, 0($sp)		#  Carrego o valor em $t0 e verifico se ele eh zero
-		beqz $t0, voltoAnterior #  Se o valor for zero, preciso voltar para o pai.
-		move $a0, $t0		#  Se nao, eu printo o valor e vou para a esquerda.
-		jal print_valor
-		j recursao_pre_esq
+		jal recursao_pre
+		
 ###### Fim da funcao de Pre_ordem ######
 
 ###### Funcao de Em_ordem ######
