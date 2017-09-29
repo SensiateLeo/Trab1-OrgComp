@@ -9,8 +9,8 @@
 ############################################## DATA ######################################
 		.data
 		.align 2
-pilha_recESQ:	.space 100		
-pilha_recDIR:	.space 100					
+pilha_valores:	.space 100		
+pilha_rec:	.space 100					
 					#  Aqui eu aloco um vetor para ser utilizado nas
 					#recursoes dos algoritmos. 400 eh um valor arbitrario
 					#grande o suficiente para que construir umas arvore 
@@ -28,9 +28,9 @@ pilha_recDIR:	.space 100
 str_menu:	.asciiz "\nMenu:\n1. Insercao.\n2. Percorrimento pre-ordem.\n3. Percorrimento em-ordem.\n4. Percorrimento pos-ordem.\n5. Sair.\n"
 str_escolhaMenu:.asciiz "Escolha uma opcao: "
 str_digite:	.asciiz "Digite um valor para ser inserido: "
-str_pre:	.asciiz "Pre-ordem:\n"
-str_pos:	.asciiz "Pos-ordem:\n"
-str_em:		.asciiz "Em-ordem:\n"
+str_pre:	.asciiz "Pre-ordem: "
+str_pos:	.asciiz "Pos-ordem: "
+str_em:		.asciiz "Em-ordem: "
 str_newline:	.asciiz "\n"
 str_pontoVir:	.asciiz ";"
 str_pontoFin:	.asciiz "."
@@ -45,16 +45,17 @@ str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
 #  $s0 = guarda o valor do comeco da pilha $sp.						   #
 #  $t0 = usado em diversas partes do codigo para guardar os valores da pilha para comparacao.
 #  $t1 =  usado para guardar o valor de 2*i+1 ou 2*i+2 multiplicado por -4.		   #
+#  $t2 = usado para guardar um valor para comparacao.					   #
 #  $s1 = usado para guardar a posicao atual no vetor (2*i+1 e 2*i+2).			   #
-#  $s2 = usado para guardar o endereco da pilha_recESQ.					   #
-#  $s3 = usado para guardar o endereco da pilha_recDIR.					   #
+#  $s2 = usado para guardar o endereco de comeco da pilha_rec	   			   #
+#  $s3 = usado para guardar o endereco de comeco da pilha_valores	 		   #
 ###########################################################################################					
 		.text
 		move $s0, $sp		#  Incializa $s0 com o valor de $sp, para voltarmos
 					#no vetor se precisarmos.
-		la $s2, pilha_recESQ	#  Recebe o endereco do vetor pilha_recESQ, onde serao
+		la $s2, pilha_rec	#  Recebe o endereco do vetor pilha_rec, onde serao
 					#armazenados os valores de retorno da recursao.
-		la $s3, pilha_recDIR	#  Mesmo para a pilha_recDIR.
+		la $s3, pilha_valores	#  Mesmo para a pilha_valores.
 ###### Inicio Main ######			
 main:		#jal print_newline
 		la $a0, str_menu	#  Impresssao do menu.
@@ -83,9 +84,10 @@ insercao:	la $a0, str_digite	#  Impressao da string para aquisitar um valor.
 					#atual no vetor, considerando que ele comeca na posicao
 					#0. Desta forma, posteriormente poderei multiplicar
 					#este valor por -4 para andar no vetor.
-	recursao_filhos:
+	loop_filhos:
 		lw $t0, 0($sp)		#  Carrego o valor inicial do vetor em $t0 para
 					#compara-lo com o valor obtido.
+		move $sp, $s0
 		beqz $t0, entra_vetor	#  Se o valor que esta no vetor for 0, o valor aquisitado
 					#entrara no vetor.
 		ble $v0, $t0, esquerda  #  Se o valor aquisitado for menor ou igual que o valor
@@ -98,14 +100,17 @@ insercao:	la $a0, str_digite	#  Impressao da string para aquisitar um valor.
 			mul $t1, $s1, -4#  Multiplico a posicao atual por -4 para inserir
 					#no vetor.
 			add $sp, $sp, $t1#  Pego o valor de $t1 e ando este valor no vetor.  
-			j recursao_filhos			
+			j loop_filhos			
 		direita:
 			mul $s1, $s1, 2 #  Ja para a direita, vamos para a pos 2*i+2.
 			addi $s1, $s1, 2
 			mul $t1, $s1, -4
 			add $sp, $sp, $t1
-			j recursao_filhos
-	entra_vetor:	
+			j loop_filhos
+	entra_vetor:
+		mul $t1, $s1, -4	#  Multiplico a posicao atual por -4 para inserir
+					#no vetor.
+		add $sp, $sp, $t1	#  Pego o valor de $t1 e ando este valor no vetor.	
 		sw $v0, 0($sp)  	#  Coloco o valor no vetor.
 		move $sp, $s0		#  Retorno $sp para o inicio do vetor.
 		move $s1, $zero		#  Volto o valor da posicao para 0.
@@ -113,29 +118,71 @@ insercao:	la $a0, str_digite	#  Impressao da string para aquisitar um valor.
 ###### Fim funcao de insercao ######
 
 ###### Funcao de Pre_ordem ######
-pre_ordem:	lw $t0, 0($sp)
-		beqz $t0, ERRO_VAZIO
-		jal recursao_pre	#  Chama a recursao.
+pre_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor em $t0 e verifico se
+		beqz $t0, ERRO_VAZIO	#ele eh zero. Se for, temos uma arvore vazia = ERRO.
+		
+		la $a0, str_pre		#  Printa a string: "Pre-ordem: "
+		li $v0, 4
+		syscall
+		
+		jal pre_ordem_rec	#  Inicia a recursao.
+		
+		la $a0, str_pontoFin	#  Printa "." .
+		li $v0, 4
+		syscall
+		
 		j main			#  Volta para o menu.
-	recursao_pre:
-		sw $ra, 0($s2)
-		addi $s2, $s2, 4	#  Vai para o proximo valor do vetorESQ.
-		## BASE ##
-		lw $t0, 0($sp)		#  Retiro o valor do no do vetor.
-		beqz $t0, fimPreOrdem	#  Se o valor for zero, volto na recursao
-		## ##
-		move $a0, $t0		#  Se o valor nao eh zero, entao printa.
+	pre_ordem_rec:
+		sw $ra, 0($s2)		#  Armazena o endereco de retorno em pilha_rec.
+		addi $s2, $s2, 4	#  Proxima posicao de pilha_rec.
+		
+		# BASE: Verifica se o valor atual do no eh zero.
+		lw $t0, 0($sp)
+		beqz $t0, pre_ordem_done
+		
+		#  Armazena o endereco do valor em $s3.
+		sw $sp, 0($s3)
+		addi $s3, $s3, 4
+		
+		#  Aqui, se ele nao for zero, entao mostra o valor.
+		move $a0, $t0		#  Printa o valor do no.
 		jal print_valor
-		## Vou para o no da esquerda ##
-		mul $s1, $s1, 2 
+	
+		#  Vou para o filho da esquerda.
+		mul $s1, $s1, 2 	#  Para acessar o filho da esquerda, vamos para a
+					#posicao 2*i + 1.
 		addi $s1, $s1, 1
+		mul $t1, $s1, -4	#  Multiplico a posicao atual por -4 para inserir
+					#no vetor.
+		add $sp, $sp, $t1	#  Pego o valor de $t1 e ando este valor no vetor.
+		#  #
+		
+		jal pre_ordem_rec
+		
+		#  Voltei da recursao, vou para a direita (2*i + 2).
+		mul $s1, $s1, 2
+		addi $s1, $s1, 2
 		mul $t1, $s1, -4
 		add $sp, $sp, $t1
-		##  ##
-		jal recursao_pre
+		#  #
+		
+		j pre_ordem_rec
+		
+	pre_ordem_done:
+		#  Volto para o pai. Calculo: (i-1)/2
+		addi $s1, $s1, -1
+		div $s1, $s1, 2
+		mul $t1, $s1, -4
+		add $sp, $sp, $t1
+		
+		addi $s2, $s2, -4
+		lw $ra, 0($s2)
+		
+		
+		
 		
 ###### Fim da funcao de Pre_ordem ######
-
+	
 ###### Funcao de Em_ordem ######
 em_ordem:
 ###### Fim Funcao de Em_ordem ######
@@ -144,6 +191,10 @@ em_ordem:
 pos_ordem:
 ###### Fim Funcao de Pos_ordem ######
 
+###### Funcao para visitar o no ######
+#visita_no:	lw $t0, 0($sp)
+#		beqz $t0, 
+###### Fim Funcao para visitar o no ######
 ###### Funcao para printar os valores ######
 print_valor:	li $v0, 1		#  Impressao do valor da arvore.
 		syscall
