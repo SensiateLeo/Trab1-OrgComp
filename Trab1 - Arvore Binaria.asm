@@ -3,7 +3,7 @@
 # Sensiate (9771571), Mateus Castilho Leite (9771550) e Vincius Nakasone Dilda (9771612).#
 #	O Trabalho compreende implementar em Assembly MIPS um algoritmo que permita a    #
 #insercao e posteriormente os percorrimentos pre-ordem, em-ordem e pos-ordem em uma      #
-#arvore binaria ordenada.								 #
+#arvore binaria.								 	 #
 ##########################################################################################
 
 ############################################## DATA ######################################
@@ -30,8 +30,7 @@ str_digite:	.asciiz "Digite um valor para ser inserido: "
 str_pre:	.asciiz "Pre-ordem: "
 str_pos:	.asciiz "Pos-ordem: "
 str_em:		.asciiz "Em-ordem: "
-str_newline:	.asciiz "\n"
-str_pontoVir:	.asciiz ";"
+str_pontoVir:	.asciiz ","
 str_pontoFin:	.asciiz "."
 str_vazio:	.asciiz "Arvore Vazia!\n"
 str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
@@ -40,14 +39,13 @@ str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
 ############################################ TEXT ##########################################
 
 ############################################################################################
-#  Registradores convencionados (favor nao trocar!):					   #
+#  Registradores convencionados:					   #
 #  $s0 = guarda o valor do comeco da pilha $sp.						   #
 #  $t0 = usado em diversas partes do codigo para guardar os valores da pilha para comparacao.
 #  $t1 =  usado para guardar o valor de 2*i+1 ou 2*i+2 multiplicado por -4.		   #
-#  											   #
 #  $s1 = usado para guardar a posicao atual no vetor (2*i+1 e 2*i+2).			   #
 #  $s2 = usado para guardar o endereco de comeco da pilha_rec	   			   #
-#  									 		   #
+#  $s3 = usado como flag para decidir se printo a virgula ou nao.			   #
 ###########################################################################################					
 		.text
 		move $s0, $sp		#  Incializa $s0 com o valor de $sp, para voltarmos
@@ -55,7 +53,7 @@ str_invalido:	.asciiz "Valor invalido! (Nao posso inserir 0 na arvore.)\n"
 		la $s2, pilha_rec	#  Recebe o endereco do vetor pilha_rec, onde serao
 					#armazenados os valores de retorno da recursao.
 ###### Inicio Main ######			
-main:		#jal print_newline
+main:		move $s3, $zero		#  Flag para printar a virgula.
 		la $a0, str_menu	#  Impresssao do menu.
 		li $v0, 4
 		syscall
@@ -184,17 +182,17 @@ pre_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor em $t0 e verifico se
 em_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor em $t0 e verifico se
 		beqz $t0, ERRO_VAZIO	#ele eh zero. Se for, temos uma arvore vazia = ERRO.
 		
-		la $a0, str_em		#  Printa a string: "Pre-ordem: "
+		la $a0, str_em		#  Printa a string: "Em-ordem: "
 		li $v0, 4
 		syscall
 		
-		jal em_rec	#  Inicia a recursao.
+		jal em_rec		#  Inicia a recursao.
 		
 		la $a0, str_pontoFin	#  Printa "." .
 		li $v0, 4
 		syscall
 		
-		move $sp, $s0
+		move $sp, $s0		#  
 		j main			#  Volta para o menu.
 	
 	em_rec:
@@ -250,7 +248,7 @@ em_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor em $t0 e verifico se
 pos_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor em $t0 e verifico se
 		beqz $t0, ERRO_VAZIO	#ele eh zero. Se for, temos uma arvore vazia = ERRO.
 		
-		la $a0, str_pos		#  Printa a string: "Pre-ordem: "
+		la $a0, str_pos		#  Printa a string: "Pos-ordem: "
 		li $v0, 4
 		syscall
 		
@@ -313,20 +311,20 @@ pos_ordem:	lw $t0, 0($sp)		#  Carrego o primeiro valor em $t0 e verifico se
 ###### Fim Funcao de Pos_ordem ######
 
 ###### Funcao para printar os valores ######
-print_valor:	li $v0, 1		#  Impressao do valor da arvore.
+print_valor:	beq $s3, 1, print_virgula
+print_valorVir:	move $a0, $t0
+		li $v0, 1		#  Impressao do valor da arvore.
 		syscall
-		li $v0, 4
-		la $a0, str_pontoVir
-		syscall
+		li $s3, 1
 		jr $ra			#  Volto para a funcao em que estava.
 ###### Fim da funcao para printar os valores ######
 
-###### Funcao para printar a virgula ######
-#print_virgula:	li $v0, 4		#  Impressao do ponto e virgula
-#		la $a0, str_pontoVir
-#		syscall
-#		jr $ra
-###### Fim da Funcao para printar a virgula ######
+###### Funcao para printar valor sem virgula ######
+print_virgula:	li $v0, 4
+		la $a0, str_pontoVir
+		syscall
+		j print_valorVir
+###### Fim da Funcao para printar valor sem virgula ######
 
 ###### Mensagem de ERRO ######
 ERRO_VAZIO:	la $a0, str_vazio	# Impressao do erro se a arvore estiver vazia.
@@ -341,12 +339,6 @@ ERRO_INVALIDO:	la $a0, str_invalido	#  Erro: Tentou inserir o numero 0 na arvore
 		syscall
 		j main	
 ###### Fim Mensagem de Valor invalido ######
-
-###### Printa uma nova linha #######
-#print_newline:	la $a0, str_newline	#  Funcao para printar uma linha nova.
-#		li $v0, 5		#  Depois volta para quem a chamou.
-#		syscall			#  Necessario o uso de jal.
-#		jr $ra
 
 ##### Termina o Programa #######
 sair:		li $v0, 10		#  Encerra o programa.
